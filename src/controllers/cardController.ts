@@ -9,7 +9,7 @@ export async function postCard(req: Request, res: Response){
     res.sendStatus(201)
 }
 
-/* export async function activateCard(req: Request, res: Response){
+export async function activateCard(req: Request, res: Response){
     const {apikey} = res.locals
     
-} */
+}
