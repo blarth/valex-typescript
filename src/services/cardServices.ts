@@ -13,6 +13,7 @@ export async function createCard(apiKey : string, employeeId : number, type: Tra
     if(existingCard) throw {erro_type : "conflict_error" , message : "Card type already in use for that employee"}
     const number : string = generateCardNumber()
     const cardholderName : string = nameFormatter(employee.fullName)
+    console.log(cardholderName)
     const expirationDate : string = dateFormatter()
     const securityCode : string = generateCVC()
     return await cardRepo.insert({
@@ -43,15 +44,28 @@ function generateCardNumber(){
 }
 
 function nameFormatter(name : string){
-    const newName : string = ""
-    const nameArray : string[] = name.split(" ")
+    const newNameArr = name.split(' ')
+    let newNamehash = {}
+    for(let i=0;i < newNameArr.length;i++){
+        if(newNameArr[i].length < 3) continue
+        if(i !==0 || i !== newNameArr.length-1) newNamehash[newNameArr[i]] = newNameArr[i][0].toUpperCase()
+        if(i === 0) newNamehash[newNameArr[i]] = newNameArr[i].toUpperCase() 
+        if(i=== newNameArr.length-1) newNamehash[newNameArr[i]] = newNameArr[i].toUpperCase()
+    }
+    console.log(newNamehash)
+    name = Object.values(newNamehash).join(" ")
+     return name
+    /* const nameArray : string[] = name.split(" ")
+    console.log(nameArray)
     for(let i= 0; i< nameArray.length; i++){
         if(nameArray[i].length < 3) continue
-        if(i === 0) newName + nameArray[i].toUpperCase()
-        if(i === nameArray.length-1) newName + nameArray[i].toUpperCase
-        newName + nameArray[i][0].toUpperCase
+        if(i === 0) {
+            newName += (nameArray[i].toUpperCase())
+        }
+        if(i === nameArray.length-1) newName += (nameArray[i].toUpperCase())
+        newName += (nameArray[i][0].toUpperCase)
     }
-    return newName
+    return newName */
 }
 
 function dateFormatter(){
