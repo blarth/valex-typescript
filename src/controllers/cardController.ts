@@ -10,6 +10,10 @@ export async function postCard(req: Request, res: Response){
 }
 
 export async function activateCard(req: Request, res: Response){
-    const {apikey} = res.locals
-    
+    const {id} = req.params
+    const {securityCode, password} = req.body
+    const idNumber : number = parseInt(id) 
+
+    await cardService.activateCard(idNumber, securityCode, password)
+    res.sendStatus(201)
 }
