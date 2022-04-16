@@ -6,6 +6,7 @@ import activateSchema from "../schemas/schemaActivate.js";
 import cardSchema from "../schemas/schemaCard.js";
 import amountSchema from "../schemas/schemaAmount.js";
 import paymentSchema from "../schemas/schemaPayments.js";
+import passwordSchema from "../schemas/schemaPassword.js";
 
 const cardRouter = Router()
 
@@ -14,4 +15,6 @@ cardRouter.post("/card/:id/activate", middlewaresValidate.default(activateSchema
 cardRouter.get("/card/:id", verifyKeyApi, cardControler.getCardBalance)
 cardRouter.post("/card/:id/recharge", middlewaresValidate.default(amountSchema),verifyKeyApi, cardControler.rechargeCard)
 cardRouter.post("/card/:id/payment/:idBusiness", middlewaresValidate.default(paymentSchema), cardControler.postPayment)
+cardRouter.put("/card/:id/block", middlewaresValidate.default(passwordSchema), cardControler.putBlockCard)
+cardRouter.put("/card/:id/unblock", middlewaresValidate.default(passwordSchema), cardControler.putUnBlockCard)
 export default cardRouter

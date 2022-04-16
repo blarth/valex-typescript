@@ -41,3 +41,17 @@ export async function postPayment(req: Request, res: Response){
     res.sendStatus(200)
 }
 
+export async function putBlockCard(req: Request, res: Response){
+    const {id} = req.params
+    const {password} = req.body
+    const idNumber : number = parseInt(id)
+    await cardService.blockCard(idNumber, password)
+    res.sendStatus(200)
+}
+export async function putUnBlockCard(req: Request, res: Response){
+    const {id} = req.params
+    const {password} = req.body
+    const idNumber : number = parseInt(id)
+    await cardService.unBlockCard(idNumber, password)
+    res.sendStatus(200)
+}
