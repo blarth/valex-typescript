@@ -71,6 +71,25 @@ export async function payment(cardId : number, password: string, businessId : nu
     return
 }
 
+export async function blockCard(id: number, password: string){
+    const card = await getCard(id)
+    verifyExpireDate(card.expirationDate)
+    if(card.isBlocked === true) throw {erro_type : "bad_request" , message : "Card already blocked"}
+    verifyPassword(card.password, password)
+    await cardRepo.update(id, {isBlocked : true})
+    return
+}
+export async function unBlockCard(id: number, password: string){
+    const card = await getCard(id)
+    verifyExpireDate(card.expirationDate)
+    console.log(card.isBlocked)
+    if(card.isBlocked === false) throw {erro_type : "bad_request" , message : "Card already unblocked"}
+    verifyPassword(card.password, password)
+    await cardRepo.update(id, {isBlocked : false})
+    return
+    
+}
+
 
 async function getEmployee(employeeId: number){
     const employee = employeeRepo.findById(employeeId)
