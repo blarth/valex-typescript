@@ -1,13 +1,17 @@
 import { Router } from "express";
-import { activateCard, postCard } from "../controllers/cardController.js";
+import * as cardControler from "../controllers/cardController.js";
 import { verifyKeyApi } from "../middlewares/verifyApiKeyMiddleware.js";
 import * as middlewaresValidate from "../middlewares/verifySchemaMiddleware.js";
 import activateSchema from "../schemas/schemaActivate.js";
 import cardSchema from "../schemas/schemaCard.js";
+import amountSchema from "../schemas/schemaAmount.js";
+import paymentSchema from "../schemas/schemaPayments.js";
 
 const cardRouter = Router()
 
-cardRouter.post("/create-card", middlewaresValidate.default(cardSchema), verifyKeyApi, postCard)
-cardRouter.post("/activate-card/:id", middlewaresValidate.default(activateSchema), verifyKeyApi, activateCard)
-
+cardRouter.post("/card", middlewaresValidate.default(cardSchema), verifyKeyApi, cardControler.postCard)
+cardRouter.post("/card/:id/activate", middlewaresValidate.default(activateSchema), verifyKeyApi, cardControler.activateCard)
+cardRouter.get("/card/:id", verifyKeyApi, cardControler.getCardBalance)
+cardRouter.post("/card/:id/recharge", middlewaresValidate.default(amountSchema),verifyKeyApi, cardControler.rechargeCard)
+cardRouter.post("/card/:id/payment/:idBusiness", middlewaresValidate.default(paymentSchema), cardControler.postPayment)
 export default cardRouter

@@ -1,7 +1,10 @@
 import * as faker from '@faker-js/faker';
 import * as employeeRepo from "../repositories/employeeRepository.js"
 import * as cardRepo from "../repositories/cardRepository.js"
-import { TransactionTypes } from '../repositories/cardRepository';
+import * as paymentRepo from "../repositories/paymentRepository.js"
+import * as rechargeRepo from "../repositories/rechargeRepository.js"
+import * as businessRepo from "../repositories/businessRepository.js"
+import { TransactionTypes } from '../repositories/cardRepository.js';
 import dayjs from "dayjs"
 import bcrypt from "bcrypt"
 import "dotenv/config";
@@ -29,13 +32,43 @@ export async function createCard(apiKey : string, employeeId : number, type: Tra
 
 export async function activateCard(id : number, securityCode : string, password: string ){
     const card = await getCard(id)
-    if(!card) throw {erro_type : "not_found_error" , message : "Card not found"}
     verifyExpireDate(card.expirationDate)
     verifyPasswordExist(card.password)
     verifySecurityCode(card.securityCode, securityCode)
     validPassword(password)
     const encryptedPassword : string = encryptPassword(password)
     return await cardRepo.update(id, {...card , password: encryptedPassword})
+}
+
+export async function getBalance(id : number){
+    await getCard(id)
+    const payments = await getpayments(id)
+    const recharges = await getRecharges(id)
+    const totalRecharges = getAmountRecharges(recharges) 
+    const totalPayments = getAmountPayments(payments)
+    const balance = totalRecharges - totalPayments
+    return {
+        balance,
+        payments,
+        recharges
+    }
+}
+
+export async function recharge(cardId : number, amount : number){
+    const card = await getCard(cardId)
+    verifyExpireDate(card.expirationDate)
+    await rechargeRepo.insert({cardId, amount})
+    return
+}
+
+export async function payment(cardId : number, password: string, businessId : number, amount : number){
+    const card = await getCard(cardId)
+    verifyExpireDate(card.expirationDate)
+    verifyPassword(card.password, password)
+    const business = await getBusiness(businessId)
+    await validTransaction(business, card, amount)
+    await paymentRepo.insert({cardId, businessId, amount})
+    return
 }
 
 
@@ -45,7 +78,7 @@ async function getEmployee(employeeId: number){
 }
 async function getCard(id: number){
     const card = await cardRepo.findById(id)
-    
+    if(!card) throw {erro_type : "not_found_error" , message : "Card not found"}
     return card
 }
 
@@ -97,6 +130,11 @@ function verifySecurityCode(securityCode : string, securityCodeUser : string){
     if(bcrypt.compareSync(securityCodeUser, securityCode)) return
     throw {erro_type : "auth_error" , message : "CVC is wrong"}
 }
+function verifyPassword(password : string, passwordUser : string){
+    
+    if(bcrypt.compareSync(passwordUser, password)) return
+    throw {erro_type : "auth_error" , message : "password is wrong"}
+}
 
 function validPassword(password : string){
     const regex = /[0-9]{4}/
@@ -106,4 +144,34 @@ function validPassword(password : string){
 
 function encryptPassword(password : string){
     return bcrypt.hashSync(password, 10);
+}
+
+async function getpayments(id : number){
+    return await paymentRepo.findByCardId(id)
+}
+
+async function getRecharges(id : number){
+    return await rechargeRepo.findByCardId(id)
+}
+function getAmountRecharges(arr){
+    return arr.reduce((total : number, item) => item.amount + total, 0);
+}
+function getAmountPayments(arr){
+    return arr.reduce((total : number, item) => item.amount + total, 0);
+}
+async function getBusiness(id : number){
+    const business = await businessRepo.findById(id)
+    if(!business) throw {erro_type : "not_found_error" , message : "Card not found"}
+    return business
+}
+
+async function validTransaction(business, card, amount : number){
+    const payments = await getpayments(card.id)
+    const recharges = await getRecharges(card.id)
+    const totalRecharges = getAmountRecharges(recharges) 
+    const totalPayments = getAmountPayments(payments)
+    const balance = totalRecharges - totalPayments
+    if(balance < amount) throw {erro_type : "bad_request" , message : "Insufficient balance"}
+    if(business.type !== card.type) throw {erro_type : "bad_request" , message : "Business type differs from card type"}
+    return
 }

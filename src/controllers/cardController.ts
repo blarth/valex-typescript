@@ -17,3 +17,27 @@ export async function activateCard(req: Request, res: Response){
     await cardService.activateCard(idNumber, securityCode, password)
     res.sendStatus(201)
 }
+
+export async function getCardBalance(req: Request, res: Response){
+    const {id} = req.params
+    const idNumber : number = parseInt(id)
+    res.send(await cardService.getBalance(idNumber))
+}
+
+export async function rechargeCard(req: Request, res: Response){
+    const {id} = req.params
+    const {amount} = req.body
+    const idNumber : number = parseInt(id)
+    await cardService.recharge(idNumber, amount)
+    res.sendStatus(201)
+}
+
+export async function postPayment(req: Request, res: Response){
+    const {id, idBusiness} = req.params
+    const {amount, password} = req.body
+    const idNumber : number = parseInt(id)
+    const idNumberBusiness : number = parseInt(idBusiness)
+    await cardService.payment(idNumber, password, idNumberBusiness, amount)
+    res.sendStatus(200)
+}
+
