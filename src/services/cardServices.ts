@@ -65,6 +65,7 @@ export async function payment(cardId : number, password: string, businessId : nu
     const card = await getCard(cardId)
     verifyExpireDate(card.expirationDate)
     verifyPassword(card.password, password)
+    verifyCardIsBlocked(card.isBlocked)
     const business = await getBusiness(businessId)
     await validTransaction(business, card, amount)
     await paymentRepo.insert({cardId, businessId, amount})
@@ -91,11 +92,13 @@ export async function unBlockCard(id: number, password: string){
 }
 
 
+
+
 async function getEmployee(employeeId: number){
     const employee = employeeRepo.findById(employeeId)
     return employee
 }
-async function getCard(id: number){
+export async function getCard(id: number){
     const card = await cardRepo.findById(id)
     if(!card) throw {erro_type : "not_found_error" , message : "Card not found"}
     return card
@@ -133,7 +136,7 @@ function generateCVC(){
     return bcrypt.hashSync(cvc, 10);
 }
 
-function verifyExpireDate(expirationDate : string){
+export function verifyExpireDate(expirationDate : string){
     
     const formatedExpirationDate = `${expirationDate.split("/")[0]}/01/${expirationDate.split("/")[1]}`
     if(dayjs(formatedExpirationDate).isBefore(dayjs())) throw {erro_type : "bad_request" , message : "Card is expired"}
@@ -144,12 +147,12 @@ function verifyPasswordExist(password : string){
     if(password !== null)  throw {erro_type : "bad_request" , message : "Card already activated"}
 }
 
-function verifySecurityCode(securityCode : string, securityCodeUser : string){
+export function verifySecurityCode(securityCode : string, securityCodeUser : string){
     
     if(bcrypt.compareSync(securityCodeUser, securityCode)) return
     throw {erro_type : "auth_error" , message : "CVC is wrong"}
 }
-function verifyPassword(password : string, passwordUser : string){
+export function verifyPassword(password : string, passwordUser : string){
     
     if(bcrypt.compareSync(passwordUser, password)) return
     throw {erro_type : "auth_error" , message : "password is wrong"}
@@ -178,13 +181,13 @@ function getAmountRecharges(arr){
 function getAmountPayments(arr){
     return arr.reduce((total : number, item) => item.amount + total, 0);
 }
-async function getBusiness(id : number){
+export async function getBusiness(id : number){
     const business = await businessRepo.findById(id)
     if(!business) throw {erro_type : "not_found_error" , message : "Card not found"}
     return business
 }
 
-async function validTransaction(business, card, amount : number){
+export async function validTransaction(business, card, amount : number){
     const payments = await getpayments(card.id)
     const recharges = await getRecharges(card.id)
     const totalRecharges = getAmountRecharges(recharges) 
@@ -192,5 +195,10 @@ async function validTransaction(business, card, amount : number){
     const balance = totalRecharges - totalPayments
     if(balance < amount) throw {erro_type : "bad_request" , message : "Insufficient balance"}
     if(business.type !== card.type) throw {erro_type : "bad_request" , message : "Business type differs from card type"}
+    return
+}
+
+export function verifyCardIsBlocked(isBlocked : boolean){
+    if(isBlocked === true) throw {erro_type : "bad_request" , message : "Card is blocked"}
     return
 }
