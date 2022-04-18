@@ -1,22 +1,16 @@
 import "dotenv/config";
 import cors from "cors";
-import express, { NextFunction, Request, Response } from "express";
+import express from "express";
 import "express-async-errors";
 import router from "./routers/index.js";
+import handleErrors from "./middlewares/errorHandlingMiddleware.js";
 
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(router)
-app.use((error , req : Request, res : Response, next : NextFunction) => {
-  if (error.type === "invalid_entity") return res.sendStatus(422);
-  if (error.type === "auth_error") return res.sendStatus(401);
-  if (error.type === "not_found_error") return res.sendStatus(404);
-  if (error.type === "conflict_error") return res.sendStatus(409);
-  if (error.type === "bad_request") return res.sendStatus(400);
-  return res.sendStatus(500);
-})
+app.use(handleErrors)
 
 
 export default app;
