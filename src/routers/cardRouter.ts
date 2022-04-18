@@ -11,10 +11,10 @@ import passwordSchema from "../schemas/schemaPassword.js";
 const cardRouter = Router()
 
 cardRouter.post("/card", middlewaresValidate.default(cardSchema), verifyKeyApi, cardControler.postCard)
-cardRouter.post("/card/:id/activate", middlewaresValidate.default(activateSchema), verifyKeyApi, cardControler.activateCard)
-cardRouter.get("/card/:id", verifyKeyApi, cardControler.getCardBalance)
+cardRouter.patch("/card/:id/activate", middlewaresValidate.default(activateSchema), cardControler.activateCard)
+cardRouter.get("/card/:id", cardControler.getCardBalance)
 cardRouter.post("/card/:id/recharge", middlewaresValidate.default(amountSchema),verifyKeyApi, cardControler.rechargeCard)
 cardRouter.post("/card/:id/payment/:idBusiness", middlewaresValidate.default(paymentSchema), cardControler.postPayment)
-cardRouter.put("/card/:id/block", middlewaresValidate.default(passwordSchema), cardControler.putBlockCard)
-cardRouter.put("/card/:id/unblock", middlewaresValidate.default(passwordSchema), cardControler.putUnBlockCard)
+cardRouter.patch("/card/:id/block", middlewaresValidate.default(passwordSchema), cardControler.patchBlockUnBlockCard)
+cardRouter.patch("/card/:id/unblock", middlewaresValidate.default(passwordSchema), cardControler.patchBlockUnBlockCard)
 export default cardRouter

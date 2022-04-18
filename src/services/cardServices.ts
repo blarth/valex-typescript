@@ -1,13 +1,13 @@
-import * as faker from "@faker-js/faker";
+import {faker} from "@faker-js/faker";
 import * as employeeRepo from "../repositories/employeeRepository.js";
 import * as cardRepo from "../repositories/cardRepository.js";
 import * as paymentRepo from "../repositories/paymentRepository.js";
 import * as rechargeRepo from "../repositories/rechargeRepository.js";
 import * as businessRepo from "../repositories/businessRepository.js";
+import * as error from "../utils/errorUtils.js"
 import { TransactionTypes } from "../repositories/cardRepository.js";
 import dayjs from "dayjs";
 import bcrypt from "bcrypt";
-import "dotenv/config";
 
 export async function createCard(
   apiKey: string,
@@ -15,18 +15,11 @@ export async function createCard(
   type: TransactionTypes
 ) {
   const employee = await getEmployee(employeeId);
-  if (!employee)
-    throw { type: "not_found_error", message: "Employee not found" };
-  const existingCard = await verifyIfCardTypeExist(employeeId, type);
-  if (existingCard)
-    throw {
-      type: "conflict_error",
-      message: "Card type already in use for that employee",
-    };
+  await verifyIfCardTypeExist(employeeId, type);
   const number: string = generateCardNumber();
   const cardholderName: string = nameFormatter(employee.fullName);
   const expirationDate: string = dateFormatter();
-  const securityCode: string = generateCVC();
+  const securityCode: string = generateSecurityCode();
   return await cardRepo.insert({
     employeeId,
     number,
@@ -45,7 +38,7 @@ export async function activateCard(
   securityCode: string,
   password: string
 ) {
-  const card = await getCard(id);
+  const card : any = await getCard(id);
   verifyExpireDate(card.expirationDate);
   verifyPasswordExist(card.password);
   verifySecurityCode(card.securityCode, securityCode);
@@ -65,9 +58,8 @@ export async function getBalance(id: number) {
   const recharges = await getRecharges(id);
   const totalRecharges = getAmountRecharges(recharges);
   const totalPayments = getAmountPayments(payments);
-  const balance = totalRecharges - totalPayments;
   return {
-    balance,
+    balance : totalRecharges - totalPayments,
     payments,
     recharges,
   };
@@ -101,8 +93,7 @@ export async function payment(
 export async function blockCard(id: number, password: string) {
   const card = await getCard(id);
   verifyExpireDate(card.expirationDate);
-  if (card.isBlocked === true)
-    throw { type: "bad_request", message: "Card already blocked" };
+  if (card.isBlocked)  throw error.badRequest("Card already blocked")
   verifyPassword(card.password, password);
   await cardRepo.update(id, { isBlocked: true });
   return;
@@ -110,9 +101,7 @@ export async function blockCard(id: number, password: string) {
 export async function unBlockCard(id: number, password: string) {
   const card = await getCard(id);
   verifyExpireDate(card.expirationDate);
-  console.log(card.isBlocked);
-  if (card.isBlocked === false)
-    throw { type: "bad_request", message: "Card already unblocked" };
+  if (!card.isBlocked) throw error.badRequest("Card already unblocked")
   verifyPassword(card.password, password);
   await cardRepo.update(id, { isBlocked: false });
   return;
@@ -120,11 +109,12 @@ export async function unBlockCard(id: number, password: string) {
 
 async function getEmployee(employeeId: number) {
   const employee = employeeRepo.findById(employeeId);
+  if (!employee) throw error.notFoundError("Employee not found")
   return employee;
 }
 export async function getCard(id: number) {
   const card = await cardRepo.findById(id);
-  if (!card) throw { type: "not_found_error", message: "Card not found" };
+  if (!card) throw error.notFoundError("Card not found")
   return card;
 }
 
@@ -132,12 +122,13 @@ async function verifyIfCardTypeExist(
   employeeId: number,
   type: TransactionTypes
 ) {
-  const existingCard = cardRepo.findByTypeAndEmployeeId(type, employeeId);
+  const existingCard = await cardRepo.findByTypeAndEmployeeId(type, employeeId);
+  if (existingCard) throw error.conflictError("Card type already in use for that employee")
   return existingCard;
 }
 
 export function generateCardNumber() {
-  return faker.faker.finance.creditCardNumber("mastercard");
+  return faker.finance.creditCardNumber("mastercard");
 }
 
 function nameFormatter(name: string) {
@@ -159,42 +150,40 @@ export function dateFormatter() {
   return dayjs().add(5, "years").format("MM/YY");
 }
 
-export function generateCVC() {
-  const cvc = faker.faker.finance.creditCardCVV();
-  console.log(cvc);
-  return bcrypt.hashSync(cvc, 10);
+export function generateSecurityCode() {
+  const securityCode = faker.finance.creditCardCVV();
+  console.log(securityCode);
+  return bcrypt.hashSync(securityCode, 10);
 }
 
 export function verifyExpireDate(expirationDate: string) {
   const formatedExpirationDate = `${expirationDate.split("/")[0]}/01/${
     expirationDate.split("/")[1]
   }`;
-  if (dayjs(formatedExpirationDate).isBefore(dayjs()))
-    throw { type: "bad_request", message: "Card is expired" };
+  if (dayjs(formatedExpirationDate).isBefore(dayjs())) throw error.badRequest("Card is expired")
   return;
 }
 
 function verifyPasswordExist(password: string) {
-  if (password !== null)
-    throw { type: "bad_request", message: "Card already activated" };
+  if (password !== null) throw error.badRequest("Card already activated")
 }
 
 export function verifySecurityCode(
   securityCode: string,
   securityCodeUser: string
 ) {
-  if (bcrypt.compareSync(securityCodeUser, securityCode)) return;
-  throw { type: "auth_error", message: "CVC is wrong" };
+  if (!bcrypt.compareSync(securityCodeUser, securityCode)) throw error.authError("CVC is wrong");
+  return
+  
 }
 export function verifyPassword(password: string, passwordUser: string) {
-  if (bcrypt.compareSync(passwordUser, password)) return;
-  throw { type: "auth_error", message: "password is wrong" };
+  if (!bcrypt.compareSync(passwordUser, password)) throw error.authError("password is wrong")
+  return
 }
 
 function validPassword(password: string) {
   const regex = /[0-9]{4}/;
-  if (password.match(regex) === null)
-    throw { type: "bad_request", message: "Password should be 4 numbers" };
+  if (password.match(regex) === null) throw error.badRequest("Password should be 4 numbers")
   return;
 }
 
@@ -218,7 +207,7 @@ function getAmountPayments(arrObj: any) {
 export async function getBusiness(id: number) {
   const business = await businessRepo.findById(id);
   if (!business)
-    throw { type: "not_found_error", message: "Card not found" };
+    throw error.notFoundError("Card not found")
   return business;
 }
 
@@ -233,22 +222,17 @@ export async function validTransaction(
   const totalPayments = getAmountPayments(payments);
   const balance = totalRecharges - totalPayments;
   if (balance < amount)
-    throw { type: "bad_request", message: "Insufficient balance" };
+    throw error.badRequest("Insufficient balance")
   if (business.type !== card.type)
-    throw {
-      type: "bad_request",
-      message: "Business type differs from card type",
-    };
+    throw error.badRequest("Business type differs from card type")
   return;
 }
 
 export function verifyCardIsBlocked(isBlocked: boolean) {
-  if (isBlocked === true)
-    throw { type: "bad_request", message: "Card is blocked" };
+  if (isBlocked) throw error.badRequest("Card is blocked")
   return;
 }
 
 function validateIsVirtual(isVirtual : boolean){
-  if(!isVirtual) return
-  throw { type: "bad_request", message: "Card is virtual" };
+  if(isVirtual)  throw error.badRequest("Card is virtual")
 }
