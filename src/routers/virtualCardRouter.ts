@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as middlewaresValidate from "../middlewares/verifySchemaMiddleware.js";
-import passwordSchema from "../schemas/schemaPassword.js";
+import passwordSchema from "../schemas/schemaPassword.js";  
 import * as virtualCardController from "../controllers/virtualCardController.js"
 
 
